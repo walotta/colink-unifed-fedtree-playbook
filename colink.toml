@@ -1,0 +1,107 @@
+[package]
+name = "unifed-fedtree"
+version = "0.0.0"
+keywords = ["federated learning", "machine learning"]
+description = "FedTree."
+install_script = """
+if [ $COLINK_FEDTREE ]; then
+    export COLINK_FEDTREE=$(pwd)
+fi
+"""
+entrypoint = """
+cargo run
+"""
+
+use_playbook = true
+
+[fedtree]
+workdir = "$COLINK_FEDTREE/run"
+name = "unifed.fedtree"
+[fedtree.roles]
+	[fedtree.roles.server]
+		max_num=1
+		[fedtree.roles.server.playbook]
+		workdir  = "$COLINK_FEDTREE/run/{{user_id[..8]}}/{{task_id[..8]}}"
+
+			[[fedtree.roles.server.playbook.steps]]
+			step_name = "convert_param"
+            process = "python3 $COLINK_FEDTREE/scripts/convert_param.py server param.json fedtree_conf"
+			process_wait = "convert_param"
+
+			[[fedtree.roles.server.playbook.steps]]
+			step_name = "run_server"
+			process = "$COLINK_FEDTREE/bin/FedTree-distributed-server fedtree_conf"
+
+			[[fedtree.roles.server.playbook.steps]]
+			step_name = "get_ip"
+			process = "curl http://ipinfo.io/ip -o ip.txt"
+			process_wait = "get_ip"
+
+			[[fedtree.roles.server.playbook.steps]]
+			send_variable = "server_ip"
+			file = "$COLINK_FEDTREE/scripts/ip.txt"
+			to_role = "client" 
+
+			[[fedtree.roles.server.playbook.steps]]
+			recv_variable = "client_finished"
+			from_role = "client"
+
+			[[fedtree.roles.server.playbook.steps]]
+			process_kill = "run_server"
+			stdout_file = "stdout.txt"
+			stderr_file = "stderr.txt"
+
+			[[fedtree.roles.server.playbook.steps]]
+			step_name = "convert_log"
+            process = "python3 $COLINK_FEDTREE/scripts/convert_log.py"
+			process_wait = "convert_log"
+
+			[[fedtree.roles.server.playbook.steps]]
+			create_entry = "unifed:task:{{task_id}}:log"
+			file = "log.txt"
+			
+	[fedtree.roles.client]
+        [fedtree.roles.client.playbook]
+		workdir  = "$COLINK_FEDTREE/run/{{user_id[..8]}}/{{task_id[..8]}}"
+
+            [[fedtree.roles.client.playbook.steps]]
+			step_name = "get_client_id"
+			process = "python3 $COLINK_FEDTREE/scripts/get_client_id.py"
+			process_wait = "get_client_id"
+
+			[[fedtree.roles.client.playbook.steps]]
+			recv_variable = "server_ip"
+			from_role = "server"
+			file = "server_ip.txt"
+
+            [[fedtree.roles.client.playbook.steps]]
+			step_name = "convert_param"
+            process = "python3 $COLINK_FEDTREE/scripts/convert_param.py client param.json fedtree_conf"
+			process_wait = "convert_param"
+
+			[[fedtree.roles.client.playbook.steps]]
+			step_name = "run_client"
+			process = "$COLINK_FEDTREE/bin/FedTree-distributed-party fedtree_conf $(cat client_id.txt)"
+
+			[[fedtree.roles.client.playbook.steps]]
+			process_wait = "run_client"
+			stdout_file = "stdout.txt"
+			stderr_file = "stderr.txt"
+			return_code = "returncode.txt"
+
+			[[fedtree.roles.client.playbook.steps]]
+			if_cond = "grep -q '0' client_id.txt"
+			send_variable = "client_finished"
+			file = "returncode.txt"
+			to_role = "server"
+
+			[[fedtree.roles.client.playbook.steps]]
+			step_name = "convert_log"
+            process = "python3 $COLINK_FEDTREE/scripts/convert_log.py"
+			process_wait = "convert_log"
+			stdout_file = "convert_log_py_stdout"
+			stderr_file = "convert_log_py_stderr"
+
+			[[fedtree.roles.client.playbook.steps]]
+			create_entry = "unifed:task:{{task_id}}:log"
+			file = "log.txt"
