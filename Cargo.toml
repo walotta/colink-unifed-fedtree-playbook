@@ -1,5 +1,5 @@
 [package]
-name = "colink-playbook-dev"
+name = "colink-unifed-fedtree-playbook"
 version = "0.0.1"
 edition = "2021"
 
