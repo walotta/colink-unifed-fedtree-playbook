@@ -45,6 +45,7 @@ name = "unifed.fedtree"
 			[[fedtree.roles.server.playbook.steps]]
 			recv_variable = "client_finished"
 			from_role = "client"
+			index = 0
 
 			[[fedtree.roles.server.playbook.steps]]
 			process_kill = "run_server"
@@ -57,8 +58,19 @@ name = "unifed.fedtree"
 			process_wait = "convert_log"
 
 			[[fedtree.roles.server.playbook.steps]]
+			step_name = "convert_return"
+			process = "python3 $COLINK_FEDTREE/scripts/convert_return.py"
+			process_wait = "convert_return"
+			stdout_file = "convert_return_py_stdout"
+			stderr_file = "convert_return_py_stderr"
+
+			[[fedtree.roles.server.playbook.steps]]
 			create_entry = "unifed:task:{{task_id}}:log"
 			file = "log.txt"
+
+			[[fedtree.roles.server.playbook.steps]]
+			create_entry = "unifed:task:{{task_id}}:return"
+			file = "return_msg.txt"
 			
 	[fedtree.roles.client]
         [fedtree.roles.client.playbook]
@@ -73,6 +85,7 @@ name = "unifed.fedtree"
 			recv_variable = "server_ip"
 			from_role = "server"
 			file = "server_ip.txt"
+			index = 0
 
             [[fedtree.roles.client.playbook.steps]]
 			step_name = "convert_param"
@@ -103,5 +116,16 @@ name = "unifed.fedtree"
 			stderr_file = "convert_log_py_stderr"
 
 			[[fedtree.roles.client.playbook.steps]]
+			step_name = "convert_return"
+			process = "python3 $COLINK_FEDTREE/scripts/convert_return.py"
+			process_wait = "convert_return"
+			stdout_file = "convert_return_py_stdout"
+			stderr_file = "convert_return_py_stderr"
+
+			[[fedtree.roles.client.playbook.steps]]
 			create_entry = "unifed:task:{{task_id}}:log"
 			file = "log.txt"
+
+			[[fedtree.roles.client.playbook.steps]]
+			create_entry = "unifed:task:{{task_id}}:return"
+			file = "return_msg.txt"
