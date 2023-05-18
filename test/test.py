@@ -23,9 +23,7 @@ def simulate_with_config(config_file_path):
     for p in config_participants:  # given user_ids are omitted and we generate new ones here
         role = p["role"]
         cl:CL.CoLink = CL.InstantServer().get_colink().switch_to_generated_user()
-        # print("cargo","run","--","--addr",cl.core_addr,"--jwt",cl.jwt)
-        # input("press enter to continue")
-        threads.append(subprocess.Popen(["cargo","run","--","--addr",cl.core_addr,"--jwt",cl.jwt]))
+        threads.append(subprocess.Popen(["./colink-playbook","--addr",cl.core_addr,"--jwt",cl.jwt]))
         participants.append(CL.Participant(user_id=cl.get_user_id(), role=role))
         cls.append(cl)
     task_id = cls[0].run_task("unifed.fedtree", json.dumps(config), participants, True)
@@ -74,6 +72,9 @@ if __name__ == "__main__":
         target_cases = ["test/configs/histsecagg.json"]
     else:
         target_cases = [f"test/configs/{_}.json" for _ in sys.argv[2:]]
+    if not os.path.exists("colink-playbook"):
+        os.system('bash -c "$(curl -fsSL https://raw.githubusercontent.com/CoLearn-Dev/colink-playbook-dev/main/download.sh)"')
+        os.system('chmod +x colink-playbook')
     for target_case in target_cases:
         print(f"Case {target_cases}")
         nw = time.time()
